@@ -311,9 +311,9 @@ with st.form("player_report", clear_on_submit=True):
                         })
                     media_links = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
                     # Add Drive links to report
-                    photo_links = [m["viewLink"] for m in media_links if not m.get("type", "").startswith("video/")]
-                    report["photoLinks"] = ", ".join(photo_links) if photo_links else ""
                     report["mediaFileIds"] = ", ".join(m["id"] for m in media_links)
+                    if media_links and "folderLink" in media_links[0]:
+                        report["playerMediaFolder"] = media_links[0]["folderLink"]
                     # Show upload count
                     st.info(f"📤 Uploaded {len(media_links)} file(s) to Google Drive")
 

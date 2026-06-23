@@ -65,13 +65,14 @@ def get_or_create_folder() -> str:
 
 def upload_file(file_bytes: bytes, filename: str, mime_type: str, player_name: str = "") -> dict:
     """
-    Upload a file to Google Drive.
+    Upload a file to Google Drive inside a player-specific subfolder.
 
     Returns dict with:
       - id: Drive file ID
       - viewLink: direct view URL
       - embedLink: embeddable URL (for images)
       - downloadLink: direct download URL
+      - folderLink: link to the player's folder
     """
     service = get_drive_service()
     if service is None:
@@ -81,7 +82,13 @@ def upload_file(file_bytes: bytes, filename: str, mime_type: str, player_name: s
     if not folder_id:
         return {}
 
-    # Prefix filename with player name for organization
+    # Create a player-specific subfolder
+    player_folder_id = folder_id
+    if player_name:
+        safe_name = player_name.strip().replace(" ", "_")
+        player_folder_id = _get_or_create_subfolder(service, folder_id, safe_name)
+
+    # Prefix filename with player name for extra clarity
     if player_name:
         safe_name = player_name.replace(" ", "_")
         upload_name = f"{safe_name}_{filename}"
@@ -90,7 +97,7 @@ def upload_file(file_bytes: bytes, filename: str, mime_type: str, player_name: s
 
     metadata = {
         "name": upload_name,
-        "parents": [folder_id],
+        "parents": [player_folder_id],
     }
 
     media = MediaIoBaseUpload(
@@ -121,7 +128,37 @@ def upload_file(file_bytes: bytes, filename: str, mime_type: str, player_name: s
         "viewLink": f"https://drive.google.com/file/d/{file_id}/view",
         "embedLink": f"https://drive.google.com/thumbnail?id={file_id}&sz=w800",
         "downloadLink": f"https://drive.google.com/uc?export=download&id={file_id}",
+        "folderLink": f"https://drive.google.com/drive/folders/{player_folder_id}",
     }
+
+
+def _get_or_create_subfolder(service, parent_id: str, folder_name: str) -> str:
+    """Get or create a subfolder inside the parent folder."""
+    query = f"name='{folder_name}' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    results = service.files().list(q=query, spaces="drive", fields="files(id)").execute()
+    files = results.get("files", [])
+
+    if files:
+        return files[0]["id"]
+
+    metadata = {
+        "name": folder_name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parent_id],
+    }
+    folder = service.files().create(body=metadata, fields="id").execute()
+    subfolder_id = folder["id"]
+
+    # Make subfolder viewable
+    try:
+        service.permissions().create(
+            fileId=subfolder_id,
+            body={"type": "anyone", "role": "reader"},
+        ).execute()
+    except Exception:
+        pass
+
+    return subfolder_id
 
 
 def upload_multiple(files: list, player_name: str = "") -> list:

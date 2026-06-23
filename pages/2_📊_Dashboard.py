@@ -1,6 +1,7 @@
 """
 MI Cricket Intelligence — Scouting Dashboard
 Real-time visualization of all scout reports from Google Sheets.
+Password-protected — only ops team can access.
 """
 
 import streamlit as st
@@ -14,6 +15,24 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.sheets import read_all_reports
 
 st.set_page_config(page_title="Scouting Dashboard", page_icon="📊", layout="wide")
+
+# ── Dashboard Password Protection ──
+DASHBOARD_PASSWORD = st.secrets.get("dashboard_password", "MIops2025")
+
+if "dashboard_authenticated" not in st.session_state:
+    st.session_state.dashboard_authenticated = False
+
+if not st.session_state.dashboard_authenticated:
+    st.markdown("## 🔒 Dashboard Access")
+    st.caption("This dashboard is restricted to the MI Cricket Intelligence ops team.")
+    pwd = st.text_input("Enter dashboard password", type="password")
+    if st.button("Access Dashboard", type="primary"):
+        if pwd == DASHBOARD_PASSWORD:
+            st.session_state.dashboard_authenticated = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+    st.stop()
 
 st.markdown("## 📊 MI Cricket Intelligence — Scouting Dashboard")
 
