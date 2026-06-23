@@ -53,8 +53,6 @@ if not st.session_state.scout_logged_in:
     with col2:
         scout_last = st.text_input("Last name *", placeholder="Kumar")
 
-    scout_phone = st.text_input("Mobile number", placeholder="+91 98765 43210")
-    scout_region = st.selectbox("Your scouting region", [""] + REGIONS)
     scout_team = st.radio("Scouting for *", ["MI Men", "MI Women"], horizontal=True)
 
     if st.button("Start filing reports →", type="primary"):
@@ -63,8 +61,8 @@ if not st.session_state.scout_logged_in:
         else:
             st.session_state.scout_logged_in = True
             st.session_state.scout_name = f"{scout_first} {scout_last}"
-            st.session_state.scout_phone = scout_phone
-            st.session_state.scout_region = scout_region
+            st.session_state.scout_phone = ""
+            st.session_state.scout_region = ""
             st.session_state.scout_team = scout_team
             st.rerun()
     st.stop()
@@ -98,7 +96,7 @@ with st.form("player_report", clear_on_submit=True):
     with col1:
         p_date = st.date_input("Date watched *", value=date.today())
     with col2:
-        p_how = st.radio("Watched", ["Live at ground", "TV / Video"], horizontal=True)
+        p_how = st.multiselect("Watched how", ["Live at ground", "TV / Video"], default=[])
 
     p_context = st.selectbox("Match context *", ["", "State League", "BCCI Domestic", "Centre of Excellence", "Local League", "Hinterland Spotting"])
     p_comp = st.text_input("Tournament / league name", placeholder="e.g. Vijay Hazare, DY Patil T20...")
