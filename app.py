@@ -120,7 +120,7 @@ with st.form("player_report", clear_on_submit=True):
 
     p_btype = ""
     if is_bowl:
-        p_btype = st.selectbox("Bowling type", ["", "RAF", "LAF", "LAO", "LAUO", "RALS", "Mystery"])
+        p_btype = st.selectbox("Bowling type", ["", "RAF", "RFM", "RMP", "LAF", "LFM", "LMP", "LAO", "LAUO", "RALS", "Mystery"])
 
     # ── Batter Assessment ──
     bat_pos = bat_hspd = bat_swing = bat_power = ""
