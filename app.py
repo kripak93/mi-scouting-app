@@ -1,7 +1,7 @@
 """
 MI Cricket Intelligence — Scouting Form
-This is the main entry point. Scouts land directly on the form.
-Dashboard is a separate page (password-protected).
+Scouts land directly on the form. No sidebar, no dashboard.
+Uses radio buttons (not dropdowns) and dynamic conditional sections.
 """
 
 import streamlit as st
@@ -15,7 +15,6 @@ from utils.drive import upload_multiple
 
 st.set_page_config(page_title="MI Scout Report", page_icon="🏏", layout="centered", initial_sidebar_state="collapsed")
 
-# Hide sidebar and page navigation completely
 st.markdown("""
 <style>
     [data-testid="stSidebar"] { display: none; }
@@ -24,7 +23,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Session state ──
 if "scout_logged_in" not in st.session_state:
     st.session_state.scout_logged_in = False
 if "players_filed" not in st.session_state:
@@ -40,36 +38,30 @@ STATES = [
     "Uttarakhand", "Vidarbha", "West Bengal",
 ]
 
-
 # ══════════════════════════════════════
 # SCOUT LOGIN
 # ══════════════════════════════════════
 if not st.session_state.scout_logged_in:
     st.markdown("## 🏏 MI Cricket Intelligence — Scout Report")
     st.caption("Log in once, then file as many reports as you like.")
-
     col1, col2 = st.columns(2)
     with col1:
         scout_first = st.text_input("First name *", placeholder="Ravi")
     with col2:
         scout_last = st.text_input("Last name *", placeholder="Kumar")
-
     scout_team = st.radio("Scouting for *", ["MI Men", "MI Women"], horizontal=True)
-
     if st.button("Start filing reports →", type="primary"):
         if not scout_first or not scout_last:
             st.error("Please enter your first and last name.")
         else:
             st.session_state.scout_logged_in = True
             st.session_state.scout_name = f"{scout_first} {scout_last}"
-            st.session_state.scout_phone = ""
-            st.session_state.scout_region = ""
             st.session_state.scout_team = scout_team
             st.rerun()
     st.stop()
 
 # ══════════════════════════════════════
-# LOGGED IN — SHOW FORM
+# LOGGED IN — DYNAMIC FORM (no st.form, so conditionals work)
 # ══════════════════════════════════════
 col_info, col_logout = st.columns([4, 1])
 with col_info:
@@ -81,250 +73,221 @@ with col_logout:
         st.rerun()
 st.markdown("---")
 
-with st.form("player_report", clear_on_submit=True):
-    # ── Player Identity ──
-    st.markdown("### 🏏 Player Identity")
-    col1, col2 = st.columns(2)
-    with col1:
-        p_first = st.text_input("First name *", placeholder="Arjun", key="pf")
-    with col2:
-        p_last = st.text_input("Last name *", placeholder="Sharma", key="pl")
+# ── Player Identity ──
+st.markdown("### 🏏 Player Identity")
+col1, col2 = st.columns(2)
+with col1:
+    p_first = st.text_input("First name *", placeholder="Arjun")
+with col2:
+    p_last = st.text_input("Last name *", placeholder="Sharma")
+col1, col2 = st.columns(2)
+with col1:
+    p_age = st.number_input("Age", min_value=13, max_value=45, value=None)
+with col2:
+    p_height = st.radio("Height", ["Short (<5'7\")", "Medium (5'7\"–5'11\")", "Tall (6'0\"–6'3\")", "Very tall (6'4\"+)"], index=None, horizontal=True)
+p_state = st.selectbox("State Association *", [""] + STATES)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        p_age = st.number_input("Age", min_value=13, max_value=45, value=None, key="pa")
-    with col2:
-        p_height = st.selectbox("Height", ["", "Short (under 5'7\")", "Medium (5'7\"–5'11\")", "Tall (6'0\"–6'3\")", "Very tall (6'4\"+)"])
+# ── Sighting Context ──
+st.markdown("### 📍 Sighting Context")
+col1, col2 = st.columns(2)
+with col1:
+    p_date = st.date_input("Date watched *", value=date.today())
+with col2:
+    p_how = st.multiselect("Watched how", ["Live at ground", "TV / Video"], default=[])
+p_context = st.radio("Match context *", ["State League", "BCCI Domestic", "Centre of Excellence", "Local League", "Hinterland Spotting"], index=None, horizontal=True)
+p_comp = st.text_input("Tournament / league name", placeholder="e.g. Vijay Hazare, DY Patil T20...")
 
-    p_state = st.selectbox("State Association *", [""] + STATES)
+# ── Specialism (this drives conditional sections) ──
+st.markdown("### ⚡ Player Specialism")
+p_spec = st.radio("Specialism *", ["Pure Batter", "Pure Bowler", "Bat/WK", "Bat AR Seam", "Bat AR Spin", "Bowl AR Seam", "Bowl AR Spin"], index=None, horizontal=True)
+p_hand = st.radio("Batting hand", ["RHB", "LHB"], index=None, horizontal=True)
 
-    # ── Sighting Context ──
-    st.markdown("### 📍 Sighting Context")
-    col1, col2 = st.columns(2)
-    with col1:
-        p_date = st.date_input("Date watched *", value=date.today())
-    with col2:
-        p_how = st.multiselect("Watched how", ["Live at ground", "TV / Video"], default=[])
+is_bat = p_spec in ["Pure Batter", "Bat/WK", "Bat AR Seam", "Bat AR Spin"]
+is_bowl = p_spec in ["Pure Bowler", "Bowl AR Seam", "Bowl AR Spin", "Bat AR Seam", "Bat AR Spin"]
+is_wk = p_spec == "Bat/WK"
 
-    p_context = st.selectbox("Match context *", ["", "State League", "BCCI Domestic", "Centre of Excellence", "Local League", "Hinterland Spotting"])
-    p_comp = st.text_input("Tournament / league name", placeholder="e.g. Vijay Hazare, DY Patil T20...")
+p_btype = ""
+if is_bowl:
+    p_btype = st.radio("Bowling type", ["RAF", "RFM", "RMP", "LAF", "LFM", "LMP", "LAO", "LAUO", "RALS", "Mystery"], index=None, horizontal=True)
 
-    # ── Specialism ──
-    st.markdown("### ⚡ Player Specialism")
-    p_spec = st.selectbox("Specialism *", ["", "Pure Batter", "Pure Bowler", "Bat/WK", "Bat AR Seam", "Bat AR Spin", "Bowl AR Seam", "Bowl AR Spin"])
-    p_hand = st.radio("Batting hand", ["RHB", "LHB"], horizontal=True)
+# ── Batter Assessment (only shows when specialism is batting) ──
+bat_pos = bat_hspd = bat_swing = bat_power = ""
+bat_power_narr = bat_gaps = bat_field = bat_readvar = bat_readvar_narr = bat_smarts = ""
+if is_bat:
+    st.markdown("### 🏏 Batter Assessment")
+    bat_pos = st.radio("Position", ["Opener", "No. 3", "Middle Order"], index=None, horizontal=True)
+    bat_hspd = st.radio("Hand speed", ["Exceptional", "Fast", "Moderate"], index=None, horizontal=True)
+    bat_swing = st.radio("Bat swing", ["Exceptional", "Very Good", "Good"], index=None, horizontal=True)
+    bat_power = st.radio("Power hitting", ["Exceptional", "Very Good", "Good", "Developing"], index=None, horizontal=True)
+    bat_power_narr = st.text_area("Power hitting moment", placeholder="A shot or moment that showed their power level...")
+    bat_gaps = st.text_area("Gaps ability", placeholder="How they found gaps and manipulated the field...")
+    bat_field = st.text_area("Does the batter play the field?", placeholder="Reading placements, hitting into gaps...")
+    bat_readvar = st.radio("Reading variations under pressure", ["Exceptional", "Good", "Struggled", "Too early to tell"], index=None, horizontal=True)
+    bat_readvar_narr = st.text_area("Variations moment", placeholder="A delivery that showed how they read the ball...")
+    bat_smarts = st.text_area("Game smarts — batting intelligence", placeholder="Walk me through what you saw...")
 
-    is_bat = p_spec in ["Pure Batter", "Bat/WK", "Bat AR Seam", "Bat AR Spin"]
-    is_bowl = p_spec in ["Pure Bowler", "Bowl AR Seam", "Bowl AR Spin", "Bat AR Seam", "Bat AR Spin"]
-    is_wk = p_spec == "Bat/WK"
+# ── Bowler Assessment (only shows when specialism is bowling) ──
+bowl_pace = bowl_speed = bowl_variations = bowl_fieldsetting = ""
+bowl_fs_narr = bowl_varpressure = bowl_pressure_narr = bowl_diff = bowl_smarts = ""
+bowl_skills = []
+bowl_phases = []
+if is_bowl:
+    st.markdown("### 🎯 Bowler Assessment")
+    bowl_pace = st.radio("Pace category", ["Express", "Fast", "Fast-Medium", "Medium"], index=None, horizontal=True)
+    bowl_speed = st.text_input("Speed on the gun (kph)", placeholder="e.g. 138-142")
+    bowl_skills = st.multiselect("Skills identified", ["Swing", "Seam", "Sharp bouncer", "Deceptive slower", "Slow bouncer", "Heel + wide yorker", "Heel only", "Wide only"])
+    bowl_variations = st.text_area("Variations picked up", placeholder="Both the ones that worked and under pressure...")
+    bowl_fieldsetting = st.radio("Field setting & ball choice", ["Exceptional", "Very Good", "Good", "Can Improve"], index=None, horizontal=True)
+    bowl_fs_narr = st.text_area("Tactical moment", placeholder="A specific over that showed their tactical thinking...")
+    bowl_varpressure = st.radio("Under pressure", ["Executed well", "Inconsistent", "Too early to tell"], index=None, horizontal=True)
+    bowl_pressure_narr = st.text_area("Pressure moment", placeholder="When the game was tight...")
+    st.markdown("**⚡ The difficult overs**")
+    bowl_diff = st.text_area("Difficult overs", placeholder="Which overs? What happened?...")
+    bowl_phases = st.multiselect("Phases assessed", ["Powerplay (1–6)", "Middle (7–15)", "Death (16–20)"])
+    bowl_smarts = st.text_area("Game smarts — bowling intelligence", placeholder="How did they think through their spell?...")
 
-    p_btype = ""
-    if is_bowl:
-        p_btype = st.selectbox("Bowling type", ["", "RAF", "RFM", "RMP", "LAF", "LFM", "LMP", "LAO", "LAUO", "RALS", "Mystery"])
+# ── Wicketkeeper (only shows for Bat/WK) ──
+wk_gloves = wk_notes = ""
+if is_wk:
+    st.markdown("### 🧤 Wicketkeeper")
+    wk_gloves = st.radio("Glove work", ["Exceptional", "Very Good", "Good"], index=None, horizontal=True)
+    wk_notes = st.text_area("WK notes", placeholder="Angles, footwork, stumpings...")
 
-    # ── Batter Assessment ──
-    bat_pos = bat_hspd = bat_swing = bat_power = ""
-    bat_power_narr = bat_gaps = bat_field = bat_readvar = bat_readvar_narr = bat_smarts = ""
-    if is_bat:
-        st.markdown("### 🏏 Batter Assessment")
-        bat_pos = st.selectbox("Position", ["", "Opener", "No. 3", "Middle Order"])
-        bat_hspd = st.selectbox("Hand speed", ["", "Exceptional", "Fast", "Moderate"])
-        bat_swing = st.selectbox("Bat swing", ["", "Exceptional", "Very Good", "Good"])
-        bat_power = st.selectbox("Power hitting ability", ["", "Exceptional", "Very Good", "Good", "Developing"])
-        bat_power_narr = st.text_area("Power hitting moment", placeholder="A shot or moment that showed their power level...")
-        bat_gaps = st.text_area("Gaps ability and creative mindset", placeholder="How they found gaps...")
-        bat_field = st.text_area("Does the batter play the field?", placeholder="Reading placements...")
-        bat_readvar = st.selectbox("Reading variations under pressure", ["", "Exceptional", "Good", "Struggled", "Too early to tell"])
-        bat_readvar_narr = st.text_area("Variations moment", placeholder="A delivery that showed how they read the ball...")
-        bat_smarts = st.text_area("Game smarts — batting intelligence", placeholder="Walk me through what you saw...")
+# ── Fielding ──
+st.markdown("### 🤸 Fielding and Athleticism")
+f_athletic = st.radio("Athletic base", ["Good fielder + runner", "Good fielder", "Good runner", "Needs development"], index=None, horizontal=True)
+col1, col2 = st.columns(2)
+with col1:
+    f_catching = st.radio("Catching", ["Exceptional", "Good", "Unreliable"], index=None)
+with col2:
+    f_arm = st.radio("Throwing arm", ["Strong", "Average", "Weak"], index=None)
+f_pos = st.text_input("Best position in the field", placeholder="e.g. Cover point, Fine leg...")
 
-    # ── Bowler Assessment ──
-    bowl_pace = bowl_speed = bowl_variations = bowl_fieldsetting = ""
-    bowl_fs_narr = bowl_varpressure = bowl_pressure_narr = bowl_diff = bowl_smarts = ""
-    bowl_skills = []
-    bowl_phases = []
-    if is_bowl:
-        st.markdown("### 🎯 Bowler Assessment")
-        bowl_pace = st.selectbox("Pace category", ["", "Express", "Fast", "Fast-Medium", "Medium"])
-        bowl_speed = st.text_input("Speed on the gun (kph)", placeholder="e.g. 138-142")
-        bowl_skills = st.multiselect("Skills identified", ["Swing", "Seam", "Sharp bouncer", "Deceptive slower (dipping)", "Deceptive slow bouncer", "Heel + wide yorker", "Heel only", "Wide only"])
-        bowl_variations = st.text_area("Variations picked up", placeholder="Both the ones that worked and under pressure...")
-        bowl_fieldsetting = st.selectbox("Field setting and ball choice", ["", "Exceptional", "Very Good", "Good", "Can Improve"])
-        bowl_fs_narr = st.text_area("Tactical moment", placeholder="A specific over that showed their tactical thinking...")
-        bowl_varpressure = st.selectbox("Speed and length under pressure", ["", "Executed under pressure", "Inconsistent under pressure", "Too early to tell"])
-        bowl_pressure_narr = st.text_area("Pressure moment", placeholder="When the game was tight...")
-        st.markdown("**⚡ The difficult overs**")
-        bowl_diff = st.text_area("Difficult overs", placeholder="Which overs? What happened?...", key="diff")
-        bowl_phases = st.multiselect("Phases assessed", ["Powerplay (1–6)", "Middle (7–15)", "Death (16–20)"])
-        bowl_smarts = st.text_area("Game smarts — bowling intelligence", placeholder="How did they think through their spell?...")
+# ── Player Comparison ──
+st.markdown("### 🔄 Player Comparison")
+p_compared = st.text_area("Who does this player remind you of?", placeholder="e.g. Plays like Samson but with better temperament...")
 
-    # ── Wicketkeeper ──
-    wk_gloves = wk_notes = ""
-    if is_wk:
-        st.markdown("### 🧤 Wicketkeeper")
-        wk_gloves = st.selectbox("Glove work", ["", "Exceptional", "Very Good", "Good"])
-        wk_notes = st.text_area("WK notes", placeholder="Angles, footwork, stumpings...")
+# ── Background ──
+st.markdown("### 📖 Background and Journey")
+p_background = st.text_area("Background", placeholder="Where are they from? How did they get into cricket?...")
 
-    # ── Fielding ──
-    st.markdown("### 🤸 Fielding and Athleticism")
-    f_athletic = st.selectbox("Athletic base", ["", "Good fielder + runner", "Good fielder", "Good runner", "Needs development"])
-    col1, col2 = st.columns(2)
-    with col1:
-        f_catching = st.selectbox("Catching", ["", "Exceptional", "Good", "Unreliable"])
-    with col2:
-        f_arm = st.selectbox("Throwing arm", ["", "Strong", "Average", "Weak"])
-    f_pos = st.text_input("Best position in the field", placeholder="e.g. Cover point, Fine leg...")
+# ── Media ──
+st.markdown("### 🎥 Photos, Videos & Profiles")
+uploaded_files = st.file_uploader(
+    "Upload photos or videos (scorecards, action shots, clips)",
+    accept_multiple_files=True,
+    type=["jpg", "jpeg", "png", "gif", "mp4", "mov", "avi", "webm"],
+)
+p_videos = st.text_area("Video links", placeholder="YouTube, Instagram URLs — one per line")
+col1, col2 = st.columns(2)
+with col1:
+    p_cricinfo = st.text_input("ESPNcricinfo profile")
+with col2:
+    p_cricheros = st.text_input("Cricheros profile")
 
-    # ── Player Comparison ──
-    st.markdown("### 🔄 Player Comparison")
-    p_compared = st.text_area("Who does this player remind you of?", placeholder="e.g. Plays like Samson but with better temperament...")
+# ── Grading (simplified) ──
+st.markdown("### ⭐ Grading")
+cgrade = st.radio("Current ability grade *", ["A+", "A", "B+", "B", "C"], index=None, horizontal=True)
+ceil_grade = st.radio("Ceiling grade (2–3 years)", ["A+", "A", "B+", "B", "C"], index=None, horizontal=True)
+rec = st.radio("Recommendation *", ["Sign Now", "Invite to Trial", "Monitor", "Pass"], index=None, horizontal=True)
+urgency = st.radio("Urgency", ["Hot Prospect", "Normal", "Low Priority"], index=None, horizontal=True)
 
-    # ── Background ──
-    st.markdown("### 📖 Background and Journey")
-    p_background = st.text_area("Background", placeholder="Where are they from? How did they get into cricket?...")
+# ── Final Word (the most important part) ──
+st.markdown("### ✍️ The Scout's Final Word")
+st.caption("In your own words — what did you *feel* about this player? Your gut. First thoughts.")
+final_word = st.text_area("Your final word", placeholder="This is your space. Tell us what you really think...", height=150)
 
-    # ── Media ──
-    st.markdown("### 🎥 Video and Profiles")
-    st.markdown("#### 📸 Upload Photos & Videos")
-    st.caption("Scorecards, action shots, batting grip, short clips. Max 10 files, 50MB each.")
-    uploaded_files = st.file_uploader(
-        "Choose photos or videos",
-        accept_multiple_files=True,
-        type=["jpg", "jpeg", "png", "gif", "mp4", "mov", "avi", "webm"],
-        key="media_upload",
-    )
-    st.markdown("#### 🔗 External Links")
-    p_videos = st.text_area("Video links", placeholder="YouTube, Instagram URLs — one per line")
-    p_cricinfo = st.text_input("ESPNcricinfo profile", placeholder="https://espncricinfo.com/player/...")
-    p_cricheros = st.text_input("Cricheros profile", placeholder="https://cricheros.com/...")
+# ── Submit ──
+st.markdown("---")
+if st.button("Save player report ✓", type="primary", use_container_width=True):
+    errors = []
+    if not p_first:
+        errors.append("Player first name")
+    if not p_last:
+        errors.append("Player last name")
+    if not p_state:
+        errors.append("State association")
+    if not p_context:
+        errors.append("Match context")
+    if not p_spec:
+        errors.append("Specialism")
+    if not cgrade:
+        errors.append("Current grade")
+    if not rec:
+        errors.append("Recommendation")
 
-    # ── Grading ──
-    st.markdown("### ⭐ Your Grading")
-    cgrade = st.selectbox("Current ability grade *", ["", "A+", "A", "B+", "B", "C"])
-    cgrade_reason = st.text_area("What makes you give this grade?", key="cgr")
-    ceil_grade = st.selectbox("Ceiling grade (2–3 years)", ["", "A+", "A", "B+", "B", "C"])
-    ceil_reason = st.text_area("What would need to happen for them to reach that ceiling?", key="clr")
+    if errors:
+        st.error(f"Missing required fields: {', '.join(errors)}")
+    else:
+        report = {
+            "submittedAt": datetime.now().isoformat(),
+            "scoutName": st.session_state.scout_name,
+            "team": st.session_state.scout_team,
+            "firstName": p_first,
+            "lastName": p_last,
+            "age": p_age or "",
+            "height": p_height or "",
+            "state": p_state,
+            "dateWatched": str(p_date),
+            "context": p_context or "",
+            "competition": p_comp,
+            "watchedHow": p_how,
+            "specialism": p_spec or "",
+            "handedness": p_hand or "",
+            "bowlerType": p_btype or "",
+            "battingPosition": bat_pos or "",
+            "handSpeed": bat_hspd or "",
+            "batSwing": bat_swing or "",
+            "powerHitting": bat_power or "",
+            "powerNarrative": bat_power_narr,
+            "gapsAbility": bat_gaps,
+            "playsField": bat_field,
+            "readVariations": bat_readvar or "",
+            "readVarNarrative": bat_readvar_narr,
+            "batterSmarts": bat_smarts,
+            "pace": bowl_pace or "",
+            "bowlingSpeed": bowl_speed,
+            "skills": bowl_skills,
+            "variations": bowl_variations,
+            "fieldSetting": bowl_fieldsetting or "",
+            "fieldSettingNarrative": bowl_fs_narr,
+            "varPressure": bowl_varpressure or "",
+            "pressureNarrative": bowl_pressure_narr,
+            "difficultOvers": bowl_diff,
+            "phases": bowl_phases,
+            "bowlerSmarts": bowl_smarts,
+            "gloves": wk_gloves or "",
+            "wkNotes": wk_notes,
+            "athletic": f_athletic or "",
+            "catching": f_catching or "",
+            "arm": f_arm or "",
+            "fieldPos": f_pos,
+            "comparedTo": p_compared,
+            "background": p_background,
+            "videos": p_videos,
+            "cricinfo": p_cricinfo,
+            "cricheros": p_cricheros,
+            "currentGrade": cgrade or "",
+            "ceilingGrade": ceil_grade or "",
+            "recommendation": rec or "",
+            "urgency": urgency or "",
+            "finalWord": final_word,
+        }
 
-    role_fit = st.multiselect("T20 role fit", ["Powerplay batter", "Anchor batter", "Finisher", "Powerplay bowler", "Middle overs specialist", "Death bowler", "WK batter"])
+        with st.spinner("Saving to MI Cricket Intelligence..."):
+            media_links = []
+            if uploaded_files:
+                files_to_upload = [{"bytes": uf.getvalue(), "name": uf.name, "type": uf.type} for uf in uploaded_files]
+                media_links = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
+                report["mediaFileIds"] = ", ".join(m["id"] for m in media_links)
+                if media_links and "folderLink" in media_links[0]:
+                    report["playerMediaFolder"] = media_links[0]["folderLink"]
 
-    rec = st.selectbox("Recommendation *", ["", "Sign Now", "Invite to Trial", "Monitor", "Pass"])
-    urgency = st.selectbox("Urgency", ["", "Hot Prospect", "Normal", "Low Priority"])
-    trial = st.text_area("Trial recommendation", placeholder="Would you call them to our performance centre — and why?")
+            success = append_report(report)
 
-    # ── Final Word ──
-    st.markdown("### ✍️ The Scout's Final Word")
-    st.caption("In your own words — what did you *feel* about this player? Your gut.")
-    final_word = st.text_area("Your final word", placeholder="This is your space. Tell us what you really think...", key="fw")
-    anything_else = st.text_area("Anything else?", placeholder="Anything that didn't fit above...")
-
-    # ── Submit ──
-    submitted = st.form_submit_button("Save player report ✓", type="primary")
-
-    if submitted:
-        errors = []
-        if not p_first:
-            errors.append("Player first name is required")
-        if not p_last:
-            errors.append("Player last name is required")
-        if not p_state:
-            errors.append("State association is required")
-        if not p_context:
-            errors.append("Match context is required")
-        if not p_spec:
-            errors.append("Specialism is required")
-        if not cgrade:
-            errors.append("Current ability grade is required")
-        if not rec:
-            errors.append("Recommendation is required")
-
-        if errors:
-            for e in errors:
-                st.error(e)
+        if success:
+            st.session_state.players_filed += 1
+            st.success(f"✅ {p_first} {p_last} saved! ({st.session_state.players_filed} players filed)")
+            st.balloons()
         else:
-            report = {
-                "submittedAt": datetime.now().isoformat(),
-                "scoutName": st.session_state.scout_name,
-                "scoutPhone": st.session_state.scout_phone,
-                "scoutRegion": st.session_state.scout_region,
-                "team": st.session_state.scout_team,
-                "firstName": p_first,
-                "lastName": p_last,
-                "age": p_age or "",
-                "height": p_height,
-                "state": p_state,
-                "dateWatched": str(p_date),
-                "context": p_context,
-                "competition": p_comp,
-                "watchedHow": p_how,
-                "specialism": p_spec,
-                "handedness": p_hand,
-                "bowlerType": p_btype,
-                "battingPosition": bat_pos,
-                "handSpeed": bat_hspd,
-                "batSwing": bat_swing,
-                "powerHitting": bat_power,
-                "powerNarrative": bat_power_narr,
-                "gapsAbility": bat_gaps,
-                "playsField": bat_field,
-                "readVariations": bat_readvar,
-                "readVarNarrative": bat_readvar_narr,
-                "batterSmarts": bat_smarts,
-                "pace": bowl_pace,
-                "bowlingSpeed": bowl_speed,
-                "skills": bowl_skills,
-                "variations": bowl_variations,
-                "fieldSetting": bowl_fieldsetting,
-                "fieldSettingNarrative": bowl_fs_narr,
-                "varPressure": bowl_varpressure,
-                "pressureNarrative": bowl_pressure_narr,
-                "difficultOvers": bowl_diff,
-                "phases": bowl_phases,
-                "bowlerSmarts": bowl_smarts,
-                "gloves": wk_gloves,
-                "wkNotes": wk_notes,
-                "athletic": f_athletic,
-                "catching": f_catching,
-                "arm": f_arm,
-                "fieldPos": f_pos,
-                "comparedTo": p_compared,
-                "background": p_background,
-                "videos": p_videos,
-                "cricinfo": p_cricinfo,
-                "cricheros": p_cricheros,
-                "currentGrade": cgrade,
-                "currentGradeReason": cgrade_reason,
-                "ceilingGrade": ceil_grade,
-                "ceilingReason": ceil_reason,
-                "roleFit": role_fit,
-                "recommendation": rec,
-                "urgency": urgency,
-                "trial": trial,
-                "finalWord": final_word,
-                "anythingElse": anything_else,
-            }
-
-            with st.spinner("Saving to MI Cricket Intelligence..."):
-                # Upload media files to Drive
-                media_links = []
-                if uploaded_files:
-                    files_to_upload = []
-                    for uf in uploaded_files:
-                        files_to_upload.append({
-                            "bytes": uf.getvalue(),
-                            "name": uf.name,
-                            "type": uf.type,
-                        })
-                    media_links = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
-                    report["mediaFileIds"] = ", ".join(m["id"] for m in media_links)
-                    if media_links and "folderLink" in media_links[0]:
-                        report["playerMediaFolder"] = media_links[0]["folderLink"]
-                    st.info(f"📤 Uploaded {len(media_links)} file(s) to Google Drive")
-
-                success = append_report(report)
-
-            if success:
-                st.session_state.players_filed += 1
-                st.success(f"✅ {p_first} {p_last} saved! ({st.session_state.players_filed} players filed this session)")
-                st.balloons()
-            else:
-                st.error("Failed to save. Check your Google Sheets connection.")
+            st.error("Failed to save. Check connection.")
