@@ -96,26 +96,38 @@ with col2:
     p_how = st.multiselect("Watched how", ["Live at ground", "TV / Video"], default=[])
 p_context = st.radio("Match context *", ["State League", "BCCI Domestic", "Centre of Excellence", "Local League", "Hinterland Spotting"], index=None, horizontal=True)
 
-# Dynamic tournament list based on context
-STATE_LEAGUES = [
-    "TNPL", "KPL", "Maharashtra Premier League", "DY Patil T20",
-    "AP Premier League", "Bengal Pro T20", "UP T20 League",
-    "Saurashtra Premier League", "J&K Premier League", "Odisha Cricket League",
-    "Meghalaya Cricket League", "Tripura T20", "Baroda T20 Challenge",
-    "Other State League",
+# Dynamic tournament list based on context + team
+STATE_LEAGUES_MEN = [
+    "T20 Mumbai", "TNPL", "Maharaja T20", "Delhi PL", "UPT20",
+    "Vidarbha PL", "Baroda PL", "MP League", "Bengal T20",
+    "Saurashtra PL", "Chhattisgarh PL", "Chandigarh PL",
+    "Andhra PL", "Jharkhand T20", "Telangana T20 (TG20)",
+    "Pondicherry PL", "Assam PL", "Other State League",
 ]
-BCCI_DOMESTIC = [
+STATE_LEAGUES_WOMEN = [
+    "T20 Mumbai (W)", "TNPL (W)", "Delhi PL (W)", "UPT20 (W)",
+    "Vidarbha PL (W)", "Baroda PL (W)", "MP League (W)", "Bengal T20 (W)",
+    "Andhra PL (W)", "Jharkhand T20 (W)", "Telangana T20 (W)",
+    "Pondicherry PL (W)", "Assam T20 (W)", "Other State League (W)",
+]
+BCCI_DOMESTIC_MEN = [
     "Ranji Trophy", "Vijay Hazare Trophy", "Syed Mushtaq Ali Trophy",
     "Duleep Trophy", "Deodhar Trophy", "CK Nayudu Trophy",
-    "Cooch Behar Trophy", "Senior Women's T20", "Women's Senior One Day",
-    "Senior Women's Challenger", "Other BCCI Domestic",
+    "Cooch Behar Trophy", "Other BCCI Domestic",
+]
+BCCI_DOMESTIC_WOMEN = [
+    "Senior Women's T20", "Women's Senior One Day",
+    "Senior Women's Challenger", "Women's U19 T20",
+    "Other BCCI Domestic (W)",
 ]
 
 p_comp = ""
 if p_context == "State League":
-    p_comp = st.selectbox("Tournament name", [""] + STATE_LEAGUES)
+    leagues = STATE_LEAGUES_WOMEN if st.session_state.scout_team == "MI Women" else STATE_LEAGUES_MEN
+    p_comp = st.selectbox("Tournament name", [""] + leagues)
 elif p_context == "BCCI Domestic":
-    p_comp = st.selectbox("Tournament name", [""] + BCCI_DOMESTIC)
+    domestic = BCCI_DOMESTIC_WOMEN if st.session_state.scout_team == "MI Women" else BCCI_DOMESTIC_MEN
+    p_comp = st.selectbox("Tournament name", [""] + domestic)
 elif p_context:
     p_comp = st.text_input("Tournament / league name", placeholder="e.g. name of the event...")
 
