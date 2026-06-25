@@ -95,7 +95,29 @@ with col1:
 with col2:
     p_how = st.multiselect("Watched how", ["Live at ground", "TV / Video"], default=[])
 p_context = st.radio("Match context *", ["State League", "BCCI Domestic", "Centre of Excellence", "Local League", "Hinterland Spotting"], index=None, horizontal=True)
-p_comp = st.text_input("Tournament / league name", placeholder="e.g. Vijay Hazare, DY Patil T20...")
+
+# Dynamic tournament list based on context
+STATE_LEAGUES = [
+    "TNPL", "KPL", "Maharashtra Premier League", "DY Patil T20",
+    "AP Premier League", "Bengal Pro T20", "UP T20 League",
+    "Saurashtra Premier League", "J&K Premier League", "Odisha Cricket League",
+    "Meghalaya Cricket League", "Tripura T20", "Baroda T20 Challenge",
+    "Other State League",
+]
+BCCI_DOMESTIC = [
+    "Ranji Trophy", "Vijay Hazare Trophy", "Syed Mushtaq Ali Trophy",
+    "Duleep Trophy", "Deodhar Trophy", "CK Nayudu Trophy",
+    "Cooch Behar Trophy", "Senior Women's T20", "Women's Senior One Day",
+    "Senior Women's Challenger", "Other BCCI Domestic",
+]
+
+p_comp = ""
+if p_context == "State League":
+    p_comp = st.selectbox("Tournament name", [""] + STATE_LEAGUES)
+elif p_context == "BCCI Domestic":
+    p_comp = st.selectbox("Tournament name", [""] + BCCI_DOMESTIC)
+elif p_context:
+    p_comp = st.text_input("Tournament / league name", placeholder="e.g. name of the event...")
 
 # ── Specialism (this drives conditional sections) ──
 st.markdown("### ⚡ Player Specialism")
