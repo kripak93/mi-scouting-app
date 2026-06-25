@@ -112,7 +112,8 @@ if is_bowl:
 
 # ── Batter Assessment (only shows when specialism is batting) ──
 bat_pos = bat_hspd = bat_swing = bat_power = ""
-bat_power_narr = bat_gaps = bat_field = bat_readvar = bat_readvar_narr = bat_smarts = ""
+bat_power_narr = bat_gaps = bat_field = bat_readvar = bat_readvar_narr = ""
+bat_smarts = []
 if is_bat:
     st.markdown("### 🏏 Batter Assessment")
     bat_pos = st.radio("Position", ["Opener", "No. 3", "Middle Order"], index=None, horizontal=True)
@@ -124,27 +125,24 @@ if is_bat:
     bat_field = st.text_area("Does the batter play the field?", placeholder="Reading placements, hitting into gaps...")
     bat_readvar = st.radio("Reading variations under pressure", ["Exceptional", "Good", "Struggled", "Too early to tell"], index=None, horizontal=True)
     bat_readvar_narr = st.text_area("Variations moment", placeholder="A delivery that showed how they read the ball...")
-    bat_smarts = st.text_area("Game smarts — batting intelligence", placeholder="Walk me through what you saw...")
+    bat_smarts = st.multiselect("Game smarts — batting intelligence", ["Reads the game well", "Rotates strike smartly", "Adapts to situation", "Good under pressure", "Picks gaps instinctively", "Controls tempo", "Reads bowler's plans", "Strong decision-making"])
 
 # ── Bowler Assessment (only shows when specialism is bowling) ──
-bowl_pace = bowl_speed = bowl_variations = bowl_fieldsetting = ""
-bowl_fs_narr = bowl_varpressure = bowl_pressure_narr = bowl_diff = bowl_smarts = ""
+bowl_pace = bowl_speed = bowl_fieldsetting = ""
+bowl_fs_narr = bowl_varpressure = ""
 bowl_skills = []
 bowl_phases = []
+bowl_smarts = []
 if is_bowl:
     st.markdown("### 🎯 Bowler Assessment")
     bowl_pace = st.radio("Pace category", ["Express", "Fast", "Fast-Medium", "Medium"], index=None, horizontal=True)
     bowl_speed = st.text_input("Speed on the gun (kph)", placeholder="e.g. 138-142")
     bowl_skills = st.multiselect("Skills identified", ["Swing", "Seam", "Sharp bouncer", "Deceptive slower", "Slow bouncer", "Heel + wide yorker", "Heel only", "Wide only"])
-    bowl_variations = st.text_area("Variations picked up", placeholder="Both the ones that worked and under pressure...")
     bowl_fieldsetting = st.radio("Field setting & ball choice", ["Exceptional", "Very Good", "Good", "Can Improve"], index=None, horizontal=True)
     bowl_fs_narr = st.text_area("Tactical moment", placeholder="A specific over that showed their tactical thinking...")
     bowl_varpressure = st.radio("Under pressure", ["Executed well", "Inconsistent", "Too early to tell"], index=None, horizontal=True)
-    bowl_pressure_narr = st.text_area("Pressure moment", placeholder="When the game was tight...")
-    st.markdown("**⚡ The difficult overs**")
-    bowl_diff = st.text_area("Difficult overs", placeholder="Which overs? What happened?...")
     bowl_phases = st.multiselect("Phases assessed", ["Powerplay (1–6)", "Middle (7–15)", "Death (16–20)"])
-    bowl_smarts = st.text_area("Game smarts — bowling intelligence", placeholder="How did they think through their spell?...")
+    bowl_smarts = st.multiselect("Game smarts — bowling intelligence", ["Reads batters well", "Adapts plans mid-over", "Sets up dismissals", "Good under pressure", "Controls pace changes", "Smart field placement", "Responds well to boundaries", "Thinks ahead of the batter"])
 
 # ── Wicketkeeper (only shows for Bat/WK) ──
 wk_gloves = wk_notes = ""
@@ -189,7 +187,7 @@ with col2:
 st.markdown("### ⭐ Grading")
 cgrade = st.radio("Current ability grade *", ["A+", "A", "B+", "B", "C"], index=None, horizontal=True)
 ceil_grade = st.radio("Ceiling grade (2–3 years)", ["A+", "A", "B+", "B", "C"], index=None, horizontal=True)
-rec = st.radio("Recommendation *", ["Sign Now", "Invite to Trial", "Monitor", "Pass"], index=None, horizontal=True)
+rec = st.radio("Recommendation *", ["Invite to Trial", "Monitor", "Pass"], index=None, horizontal=True)
 urgency = st.radio("Urgency", ["Hot Prospect", "Normal", "Low Priority"], index=None, horizontal=True)
 
 # ── Final Word (the most important part) ──
@@ -248,12 +246,12 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
             "pace": bowl_pace or "",
             "bowlingSpeed": bowl_speed,
             "skills": bowl_skills,
-            "variations": bowl_variations,
+            "variations": "",
             "fieldSetting": bowl_fieldsetting or "",
             "fieldSettingNarrative": bowl_fs_narr,
             "varPressure": bowl_varpressure or "",
-            "pressureNarrative": bowl_pressure_narr,
-            "difficultOvers": bowl_diff,
+            "pressureNarrative": "",
+            "difficultOvers": "",
             "phases": bowl_phases,
             "bowlerSmarts": bowl_smarts,
             "gloves": wk_gloves or "",
