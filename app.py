@@ -142,7 +142,7 @@ is_wk = p_spec == "Bat/WK"
 
 p_btype = ""
 if is_bowl:
-    p_btype = st.radio("Bowling type", ["RAF", "RFM", "RMP", "LAF", "LFM", "LMP", "LAO", "LAUO", "RALS", "Mystery"], index=None, horizontal=True)
+    p_btype = st.radio("Bowling type", ["RAF", "RFM", "RMP", "LAF", "LFM", "LMP", "LAO", "LAUO", "RALS", "RAOS", "Mystery"], index=None, horizontal=True)
 
 # ── Batter Assessment (only shows when specialism is batting) ──
 bat_pos = bat_hspd = bat_swing = bat_power = ""
@@ -167,11 +167,20 @@ bowl_fs_narr = bowl_varpressure = ""
 bowl_skills = []
 bowl_phases = []
 bowl_smarts = []
+bowl_revs = ""
 if is_bowl:
     st.markdown("### 🎯 Bowler Assessment")
-    bowl_pace = st.radio("Pace category", ["Express", "Fast", "Fast-Medium", "Medium"], index=None, horizontal=True)
-    bowl_speed = st.text_input("Speed on the gun (kph)", placeholder="e.g. 138-142")
-    bowl_skills = st.multiselect("Skills identified", ["Swing", "Seam", "Sharp bouncer", "Deceptive slower", "Slow bouncer", "Heel + wide yorker", "Heel only", "Wide only"])
+    is_spinner = p_spec in ["Bat AR Spin", "Bowl AR Spin"]
+
+    if is_spinner:
+        bowl_pace = st.radio("Spin speed", ["Fast Spin", "Medium Spin", "Slow Spin"], index=None, horizontal=True)
+        bowl_revs = st.radio("Revs on ball", ["Exceptional", "Very Good", "Good", "Developing"], index=None, horizontal=True)
+        bowl_skills = st.multiselect("Skills identified", ["Big turn", "Drift", "Dip", "Arm ball", "Carrom ball", "Googly", "Top spinner", "Slider", "Undercutter", "Flight control"])
+    else:
+        bowl_pace = st.radio("Pace category", ["Express", "Fast", "Fast-Medium", "Medium"], index=None, horizontal=True)
+        bowl_speed = st.text_input("Speed on the gun (kph)", placeholder="e.g. 138-142")
+        bowl_skills = st.multiselect("Skills identified", ["Swing", "Seam", "Sharp bouncer", "Deceptive slower", "Slow bouncer", "Heel + wide yorker", "Heel only", "Wide only"])
+
     bowl_fieldsetting = st.radio("Field setting & ball choice", ["Exceptional", "Very Good", "Good", "Can Improve"], index=None, horizontal=True)
     bowl_fs_narr = st.text_area("Tactical moment", placeholder="A specific over that showed their tactical thinking...")
     bowl_varpressure = st.radio("Under pressure", ["Executed well", "Inconsistent", "Too early to tell"], index=None, horizontal=True)
@@ -279,6 +288,7 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
             "batterSmarts": bat_smarts,
             "pace": bowl_pace or "",
             "bowlingSpeed": bowl_speed,
+            "bowlingRevs": bowl_revs or "",
             "skills": bowl_skills,
             "variations": "",
             "fieldSetting": bowl_fieldsetting or "",
