@@ -171,11 +171,12 @@ bowl_revs = ""
 if is_bowl:
     st.markdown("### 🎯 Bowler Assessment")
     is_spinner = p_spec in ["Bat AR Spin", "Bowl AR Spin"]
+    is_pacer = p_spec in ["Pure Bowler", "Bat AR Seam", "Bowl AR Seam"]
 
     if is_spinner:
-        bowl_pace = st.radio("Spin speed", ["Fast Spin", "Medium Spin", "Slow Spin"], index=None, horizontal=True)
+        bowl_pace = st.radio("Spin speed", ["Fast Spin", "Slow Spin"], index=None, horizontal=True)
         bowl_revs = st.radio("Revs on ball", ["Exceptional", "Very Good", "Good", "Developing"], index=None, horizontal=True)
-        bowl_skills = st.multiselect("Skills identified", ["Big turn", "Drift", "Dip", "Arm ball", "Carrom ball", "Googly", "Top spinner", "Slider", "Undercutter", "Flight control"])
+        bowl_skills = st.multiselect("Skills identified", ["Carrom Ball", "Arm Ball", "Googly", "Top Spinner", "Doosra", "Slider"])
     else:
         bowl_pace = st.radio("Pace category", ["Express", "Fast", "Fast-Medium", "Medium"], index=None, horizontal=True)
         bowl_speed = st.text_input("Speed on the gun (kph)", placeholder="e.g. 138-142")
