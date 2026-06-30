@@ -133,7 +133,7 @@ elif p_context:
 
 # ── Specialism (this drives conditional sections) ──
 st.markdown("### ⚡ Player Specialism")
-p_spec = st.radio("Specialism *", ["Pure Batter", "Pure Bowler", "Bat/WK", "Bat AR Seam", "Bat AR Spin", "Bowl AR Seam", "Bowl AR Spin"], index=None, horizontal=True)
+p_spec = st.radio("Specialism *", ["Pure Batter", "Bat/WK", "Bat AR Seam", "Bat AR Spin", "Pure Bowler", "Bowl AR Seam", "Bowl AR Spin"], index=None, horizontal=True)
 p_hand = st.radio("Batting hand", ["RHB", "LHB"], index=None, horizontal=True)
 
 is_bat = p_spec in ["Pure Batter", "Bat/WK", "Bat AR Seam", "Bat AR Spin"]
@@ -142,28 +142,32 @@ is_wk = p_spec == "Bat/WK"
 
 p_btype = ""
 if is_bowl:
-    p_btype = st.radio("Bowling type", ["RAF", "RFM", "RMP", "LAF", "LFM", "LMP", "LAO", "LAUO", "RALS", "RAOS", "Mystery"], index=None, horizontal=True)
+    is_spin_spec = p_spec in ["Bat AR Spin", "Bowl AR Spin"]
+    if is_spin_spec:
+        p_btype = st.radio("Bowling type", ["LAO", "LAUO", "RALS", "RAOS", "Mystery"], index=None, horizontal=True)
+    else:
+        p_btype = st.radio("Bowling type", ["RAF", "RFM", "RMP", "LAF", "LFM", "LMP"], index=None, horizontal=True)
 
 # ── Batter Assessment (only shows when specialism is batting) ──
 bat_pos = bat_hspd = bat_swing = bat_power = ""
-bat_power_narr = bat_gaps = bat_field = bat_readvar = bat_readvar_narr = ""
+bat_readvar = ""
 bat_smarts = []
+bat_shots_pace = []
+bat_shots_spin = []
 if is_bat:
     st.markdown("### 🏏 Batter Assessment")
     bat_pos = st.radio("Position", ["Opener", "No. 3", "Middle Order"], index=None, horizontal=True)
     bat_hspd = st.radio("Hand speed", ["Exceptional", "Fast", "Moderate"], index=None, horizontal=True)
     bat_swing = st.radio("Bat swing", ["Exceptional", "Very Good", "Good"], index=None, horizontal=True)
     bat_power = st.radio("Power hitting", ["Exceptional", "Very Good", "Good", "Developing"], index=None, horizontal=True)
-    bat_power_narr = st.text_area("Power hitting moment", placeholder="A shot or moment that showed their power level...")
-    bat_gaps = st.text_area("Gaps ability", placeholder="How they found gaps and manipulated the field...")
-    bat_field = st.text_area("Does the batter play the field?", placeholder="Reading placements, hitting into gaps...")
-    bat_readvar = st.radio("Reading variations under pressure", ["Exceptional", "Good", "Struggled", "Too early to tell"], index=None, horizontal=True)
-    bat_readvar_narr = st.text_area("Variations moment", placeholder="A delivery that showed how they read the ball...")
+    bat_shots_pace = st.multiselect("Shots vs Pace", ["Ramp", "Scoop", "Upper Cut"])
+    bat_shots_spin = st.multiselect("Shots vs Spin", ["Sweep", "Reverse Sweep", "Slog Sweep", "Inside Out"])
+    bat_readvar = st.radio("Reading variations under pressure", ["Exceptional", "Good", "Average", "Too early to tell"], index=None, horizontal=True)
     bat_smarts = st.multiselect("Game smarts — batting intelligence", ["Reads the game well", "Rotates strike smartly", "Adapts to situation", "Good under pressure", "Picks gaps instinctively", "Controls tempo", "Reads bowler's plans", "Strong decision-making"])
 
 # ── Bowler Assessment (only shows when specialism is bowling) ──
 bowl_pace = bowl_speed = bowl_fieldsetting = ""
-bowl_fs_narr = bowl_varpressure = ""
+bowl_varpressure = ""
 bowl_skills = []
 bowl_phases = []
 bowl_smarts = []
@@ -183,9 +187,8 @@ if is_bowl:
         bowl_skills = st.multiselect("Skills identified", ["Swing", "Seam", "Sharp bouncer", "Deceptive slower", "Slow bouncer", "Heel + wide yorker", "Heel only", "Wide only"])
 
     bowl_fieldsetting = st.radio("Field setting & ball choice", ["Exceptional", "Very Good", "Good", "Can Improve"], index=None, horizontal=True)
-    bowl_fs_narr = st.text_area("Tactical moment", placeholder="A specific over that showed their tactical thinking...")
     bowl_varpressure = st.radio("Under pressure", ["Executed well", "Inconsistent", "Too early to tell"], index=None, horizontal=True)
-    bowl_phases = st.multiselect("Phases assessed", ["Powerplay (1–6)", "Middle (7–15)", "Death (16–20)"])
+    bowl_phases = st.multiselect("Phase Specialism", ["Powerplay (1–6)", "Middle (7–15)", "Death (16–20)"])
     bowl_smarts = st.multiselect("Game smarts — bowling intelligence", ["Reads batters well", "Adapts plans mid-over", "Sets up dismissals", "Good under pressure", "Controls pace changes", "Smart field placement", "Responds well to boundaries", "Thinks ahead of the batter"])
 
 # ── Wicketkeeper (only shows for Bat/WK) ──
@@ -203,7 +206,7 @@ with col1:
     f_catching = st.radio("Catching", ["Exceptional", "Good", "Unreliable"], index=None)
 with col2:
     f_arm = st.radio("Throwing arm", ["Strong", "Average", "Weak"], index=None)
-f_pos = st.text_input("Best position in the field", placeholder="e.g. Cover point, Fine leg...")
+f_pos = st.radio("Best fielding position", ["Infield", "Outfield"], index=None, horizontal=True)
 
 # ── Player Comparison ──
 st.markdown("### 🔄 Player Comparison")
@@ -281,11 +284,9 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
             "handSpeed": bat_hspd or "",
             "batSwing": bat_swing or "",
             "powerHitting": bat_power or "",
-            "powerNarrative": bat_power_narr,
-            "gapsAbility": bat_gaps,
-            "playsField": bat_field,
+            "shotsPace": bat_shots_pace if is_bat else [],
+            "shotsSpin": bat_shots_spin if is_bat else [],
             "readVariations": bat_readvar or "",
-            "readVarNarrative": bat_readvar_narr,
             "batterSmarts": bat_smarts,
             "pace": bowl_pace or "",
             "bowlingSpeed": bowl_speed,
@@ -293,7 +294,6 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
             "skills": bowl_skills,
             "variations": "",
             "fieldSetting": bowl_fieldsetting or "",
-            "fieldSettingNarrative": bowl_fs_narr,
             "varPressure": bowl_varpressure or "",
             "pressureNarrative": "",
             "difficultOvers": "",
