@@ -320,11 +320,20 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
         with st.spinner("Saving to MI Cricket Intelligence..."):
             media_links = []
             if uploaded_files:
-                files_to_upload = [{"bytes": uf.getvalue(), "name": uf.name, "type": uf.type} for uf in uploaded_files]
-                media_links = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
-                report["mediaFileIds"] = ", ".join(m["id"] for m in media_links)
-                if media_links and "folderLink" in media_links[0]:
-                    report["playerMediaFolder"] = media_links[0]["folderLink"]
+                files_to_upload = []
+                for uf in uploaded_files:
+                    if uf.size > 25 * 1024 * 1024:
+                        st.warning(f"⚠️ {uf.name} too large ({uf.size // (1024*1024)}MB). Max 25MB. Skipping.")
+                        continue
+                    files_to_upload.append({"bytes": uf.getvalue(), "name": uf.name, "type": uf.type})
+                if files_to_upload:
+                    media_links = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
+                    valid_links = [m for m in media_links if m]
+                    if valid_links:
+                        report["mediaFileIds"] = ", ".join(m["id"] for m in valid_links)
+                        if valid_links[0].get("folderLink"):
+                            report["playerMediaFolder"] = valid_links[0]["folderLink"]
+                        st.info(f"📤 Uploaded {len(valid_links)} file(s) to Google Drive")
 
             success = append_report(report)
 

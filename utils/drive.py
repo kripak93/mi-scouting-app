@@ -11,7 +11,7 @@ from googleapiclient.http import MediaIoBaseUpload
 import io
 
 SCOPES = [
-    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive",
 ]
 
 # Folder name in Drive where all scout media goes
@@ -103,14 +103,18 @@ def upload_file(file_bytes: bytes, filename: str, mime_type: str, player_name: s
     media = MediaIoBaseUpload(
         io.BytesIO(file_bytes),
         mimetype=mime_type,
-        resumable=True,
+        resumable=len(file_bytes) > 5 * 1024 * 1024,  # Only resumable for files > 5MB
     )
 
-    uploaded = service.files().create(
-        body=metadata,
-        media_body=media,
-        fields="id, webViewLink, webContentLink",
-    ).execute()
+    try:
+        uploaded = service.files().create(
+            body=metadata,
+            media_body=media,
+            fields="id, webViewLink, webContentLink",
+        ).execute()
+    except Exception as e:
+        st.warning(f"Upload failed for {filename}: {str(e)[:100]}")
+        return {}
 
     file_id = uploaded["id"]
 
