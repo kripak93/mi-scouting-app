@@ -14,8 +14,8 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-# Folder name in Drive where all scout media goes
-DRIVE_FOLDER_NAME = "MI_Scout_Media"
+# Folder ID — this is a folder in your personal Drive shared with the service account
+DRIVE_FOLDER_ID = "1OLVXTd9ZkuDluGooDlKEr0gfDeopqppH"
 
 
 @st.cache_resource(ttl=3600)
@@ -28,39 +28,9 @@ def get_drive_service():
     return build("drive", "v3", credentials=creds)
 
 
-@st.cache_data(ttl=3600)
 def get_or_create_folder() -> str:
-    """Get or create the MI_Scout_Media folder, return its ID."""
-    service = get_drive_service()
-    if service is None:
-        return ""
-
-    # Search for existing folder
-    query = f"name='{DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-    results = service.files().list(q=query, spaces="drive", fields="files(id, name)").execute()
-    files = results.get("files", [])
-
-    if files:
-        folder_id = files[0]["id"]
-    else:
-        # Create folder
-        metadata = {
-            "name": DRIVE_FOLDER_NAME,
-            "mimeType": "application/vnd.google-apps.folder",
-        }
-        folder = service.files().create(body=metadata, fields="id").execute()
-        folder_id = folder["id"]
-
-    # Make folder viewable by anyone with link
-    try:
-        service.permissions().create(
-            fileId=folder_id,
-            body={"type": "anyone", "role": "reader"},
-        ).execute()
-    except Exception:
-        pass  # Permission might already exist
-
-    return folder_id
+    """Return the hardcoded folder ID (owned by your personal account)."""
+    return DRIVE_FOLDER_ID
 
 
 def upload_file(file_bytes: bytes, filename: str, mime_type: str, player_name: str = "") -> dict:

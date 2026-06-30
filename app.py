@@ -11,7 +11,6 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.sheets import append_report
-from utils.drive import upload_multiple
 
 st.set_page_config(page_title="MI Scout Report", page_icon="🏏", layout="centered", initial_sidebar_state="collapsed")
 
@@ -218,12 +217,13 @@ p_background = st.text_area("Background", placeholder="Where are they from? How 
 
 # ── Media ──
 st.markdown("### 🎥 Photos, Videos & Profiles")
+st.markdown("⚠️ **Max 25MB per file.** For larger videos, paste a Drive/YouTube link below.")
 uploaded_files = st.file_uploader(
-    "Upload photos or videos (scorecards, action shots, clips)",
+    "Upload photos or short video clips",
     accept_multiple_files=True,
-    type=["jpg", "jpeg", "png", "gif", "mp4", "mov", "avi", "webm"],
+    type=["jpg", "jpeg", "png", "gif", "mp4", "mov"],
 )
-p_videos = st.text_area("Video links", placeholder="YouTube, Instagram URLs — one per line")
+p_videos = st.text_area("Video / media links (for larger files)", placeholder="Paste Google Drive, YouTube, or Instagram links — one per line")
 col1, col2 = st.columns(2)
 with col1:
     p_cricinfo = st.text_input("ESPNcricinfo profile")
@@ -318,22 +318,36 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
         }
 
         with st.spinner("Saving to MI Cricket Intelligence..."):
-            media_links = []
+            # Upload files via Apps Script
             if uploaded_files:
-                files_to_upload = []
-                for uf in uploaded_files:
-                    if uf.size > 25 * 1024 * 1024:
-                        st.warning(f"⚠️ {uf.name} too large ({uf.size // (1024*1024)}MB). Max 25MB. Skipping.")
-                        continue
-                    files_to_upload.append({"bytes": uf.getvalue(), "name": uf.name, "type": uf.type})
-                if files_to_upload:
-                    media_links = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
-                    valid_links = [m for m in media_links if m]
-                    if valid_links:
-                        report["mediaFileIds"] = ", ".join(m["id"] for m in valid_links)
-                        if valid_links[0].get("folderLink"):
-                            report["playerMediaFolder"] = valid_links[0]["folderLink"]
-                        st.info(f"📤 Uploaded {len(valid_links)} file(s) to Google Drive")
+                import base64
+                import requests as req
+                file_upload_url = st.secrets.get("file_upload_url", "")
+                if file_upload_url:
+                    uploaded_links = []
+                    for uf in uploaded_files:
+                        if uf.size > 25 * 1024 * 1024:
+                            st.warning(f"⚠️ {uf.name} exceeds 25MB limit. Skipping.")
+                            continue
+                        try:
+                            b64 = base64.b64encode(uf.getvalue()).decode("utf-8")
+                            payload = {
+                                "fileName": uf.name,
+                                "mimeType": uf.type,
+                                "fileData": b64,
+                                "playerName": f"{p_first} {p_last}",
+                            }
+                            resp = req.post(file_upload_url, json=payload, timeout=120)
+                            result = resp.json()
+                            if result.get("success"):
+                                uploaded_links.append(result["viewLink"])
+                        except Exception as e:
+                            st.warning(f"Upload failed for {uf.name}: {str(e)[:80]}")
+                    if uploaded_links:
+                        report["mediaFileLinks"] = ", ".join(uploaded_links)
+                        st.info(f"📤 Uploaded {len(uploaded_links)} file(s) to Drive")
+                else:
+                    st.warning("File upload not configured yet. Your report will save without media files.")
 
             success = append_report(report)
 
