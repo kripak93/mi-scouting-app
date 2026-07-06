@@ -11,6 +11,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.sheets import append_report
+from utils.r2_storage import upload_multiple
 
 st.set_page_config(page_title="MI Scout Report", page_icon="🏏", layout="centered", initial_sidebar_state="collapsed")
 
@@ -217,7 +218,7 @@ p_background = st.text_area("Background", placeholder="Where are they from? How 
 
 # ── Media ──
 st.markdown("### 🎥 Photos, Videos & Profiles")
-st.markdown("⚠️ **Max 25MB per file.** For larger videos, paste a Drive/YouTube link below.")
+st.markdown("⚠️ **Max 50MB per file.** For larger videos, paste a link below.")
 uploaded_files = st.file_uploader(
     "Upload photos or short video clips",
     accept_multiple_files=True,
@@ -318,36 +319,19 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
         }
 
         with st.spinner("Saving to MI Cricket Intelligence..."):
-            # Upload files via Apps Script
+            # Upload files to R2
             if uploaded_files:
-                import base64
-                import requests as req
-                file_upload_url = st.secrets.get("file_upload_url", "")
-                if file_upload_url:
-                    uploaded_links = []
-                    for uf in uploaded_files:
-                        if uf.size > 25 * 1024 * 1024:
-                            st.warning(f"⚠️ {uf.name} exceeds 25MB limit. Skipping.")
-                            continue
-                        try:
-                            b64 = base64.b64encode(uf.getvalue()).decode("utf-8")
-                            payload = {
-                                "fileName": uf.name,
-                                "mimeType": uf.type,
-                                "fileData": b64,
-                                "playerName": f"{p_first} {p_last}",
-                            }
-                            resp = req.post(file_upload_url, json=payload, timeout=120)
-                            result = resp.json()
-                            if result.get("success"):
-                                uploaded_links.append(result["viewLink"])
-                        except Exception as e:
-                            st.warning(f"Upload failed for {uf.name}: {str(e)[:80]}")
-                    if uploaded_links:
-                        report["mediaFileLinks"] = ", ".join(uploaded_links)
-                        st.info(f"📤 Uploaded {len(uploaded_links)} file(s) to Drive")
-                else:
-                    st.warning("File upload not configured yet. Your report will save without media files.")
+                files_to_upload = []
+                for uf in uploaded_files:
+                    if uf.size > 50 * 1024 * 1024:
+                        st.warning(f"⚠️ {uf.name} exceeds 50MB limit. Skipping.")
+                        continue
+                    files_to_upload.append({"bytes": uf.getvalue(), "name": uf.name, "type": uf.type})
+                if files_to_upload:
+                    media_urls = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
+                    if media_urls:
+                        report["mediaFileLinks"] = ", ".join(media_urls)
+                        st.info(f"📤 Uploaded {len(media_urls)} file(s)")
 
             success = append_report(report)
 
