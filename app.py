@@ -27,6 +27,8 @@ if "scout_logged_in" not in st.session_state:
     st.session_state.scout_logged_in = False
 if "players_filed" not in st.session_state:
     st.session_state.players_filed = 0
+if "filed_players_log" not in st.session_state:
+    st.session_state.filed_players_log = []
 
 STATES = [
     "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh",
@@ -151,11 +153,13 @@ if is_bowl:
 # ── Batter Assessment (only shows when specialism is batting) ──
 bat_pos = bat_hspd = bat_swing = bat_power = ""
 bat_readvar = ""
+bat_vs = ""
 bat_smarts = []
 bat_shots_pace = []
 bat_shots_spin = []
 if is_bat:
     st.markdown("### 🏏 Batter Assessment")
+    bat_vs = st.radio("Good vs", ["Pace", "Spin", "Both"], index=None, horizontal=True)
     bat_pos = st.radio("Position", ["Opener", "No. 3", "Middle Order"], index=None, horizontal=True)
     bat_hspd = st.radio("Hand speed", ["Exceptional", "Fast", "Moderate"], index=None, horizontal=True)
     bat_swing = st.radio("Bat swing", ["Exceptional", "Very Good", "Good"], index=None, horizontal=True)
@@ -282,6 +286,7 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
             "handedness": p_hand or "",
             "bowlerType": p_btype or "",
             "battingPosition": bat_pos or "",
+            "goodVs": bat_vs or "",
             "handSpeed": bat_hspd or "",
             "batSwing": bat_swing or "",
             "powerHitting": bat_power or "",
@@ -337,7 +342,18 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
 
         if success:
             st.session_state.players_filed += 1
+            st.session_state.filed_players_log.append(f"{p_first} {p_last}")
             st.success(f"✅ {p_first} {p_last} saved! ({st.session_state.players_filed} players filed)")
             st.balloons()
+            # File another report button
+            if st.button("📋 File another report", type="primary"):
+                st.rerun()
         else:
             st.error("Failed to save. Check connection.")
+
+# ── Session Log ──
+if st.session_state.filed_players_log:
+    st.markdown("---")
+    st.markdown("### 📝 Your session log")
+    for i, name in enumerate(st.session_state.filed_players_log, 1):
+        st.write(f"{i}. {name} ✓")
