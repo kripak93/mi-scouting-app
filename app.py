@@ -269,9 +269,26 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
     if errors:
         st.error(f"Missing required fields: {', '.join(errors)}")
     else:
-        report = {
-            "submittedAt": datetime.now().isoformat(),
-            "scoutName": st.session_state.scout_name,
+        # Duplicate check: same player + same scout
+        from utils.sheets import read_all_reports
+        existing = read_all_reports()
+        is_duplicate = False
+        if not existing.empty and "firstName" in existing.columns and "lastName" in existing.columns:
+            matches = existing[
+                (existing["firstName"].str.lower() == p_first.lower()) &
+                (existing["lastName"].str.lower() == p_last.lower()) &
+                (existing["scoutName"] == st.session_state.scout_name)
+            ]
+            if len(matches) > 0:
+                prev_date = matches.iloc[0].get("dateWatched", "unknown date")
+                st.error(f"⚠️ Duplicate: You ({st.session_state.scout_name}) already filed a report for {p_first} {p_last} on {prev_date}. Report not saved.")
+                is_duplicate = True
+                st.stop()
+
+        if not is_duplicate:
+            report = {
+                "submittedAt": datetime.now().isoformat(),
+                "scoutName": st.session_state.scout_name,
             "team": st.session_state.scout_team,
             "firstName": p_first,
             "lastName": p_last,
