@@ -52,6 +52,48 @@ def get_worksheet():
     return spreadsheet.worksheet(SHEET_NAME)
 
 
+def _clean_headers(raw_header: list) -> list:
+    """Make a safe, unique header list.
+
+    gspread's get_all_records() raises if the header row has blank or duplicate
+    cells (e.g. trailing empty columns left behind by header rewrites). We repair
+    the header instead of trusting it:
+    - blank cells become 'column_N'
+    - duplicates get a numeric suffix ('_2', '_3', ...)
+    """
+    seen: dict = {}
+    out: list = []
+    for i, h in enumerate(raw_header):
+        name = str(h).strip() if h is not None else ""
+        if not name:
+            name = f"column_{i + 1}"
+        if name in seen:
+            seen[name] += 1
+            name = f"{name}_{seen[name]}"
+        else:
+            seen[name] = 1
+        out.append(name)
+    return out
+
+
+def _frame_from_values(values: list) -> pd.DataFrame:
+    """Build a DataFrame from raw get_all_values(), tolerating messy headers."""
+    if len(values) < 2:
+        return pd.DataFrame()
+    header = _clean_headers(values[0])
+    width = len(header)
+    rows = [(r + [""] * width)[:width] for r in values[1:]]
+    df = pd.DataFrame(rows, columns=header)
+    # Drop synthetic columns that are entirely empty (trailing blank sheet cols).
+    drop = [c for c in df.columns
+            if c.startswith("column_") and (df[c].astype(str) == "").all()]
+    if drop:
+        df = df.drop(columns=drop)
+    # Drop fully-blank rows.
+    df = df.loc[~(df.astype(str) == "").all(axis=1)].reset_index(drop=True)
+    return df
+
+
 @st.cache_data(ttl=60)
 def read_all_reports() -> pd.DataFrame:
     """Read all scout reports from the sheet into a DataFrame."""
@@ -61,10 +103,8 @@ def read_all_reports() -> pd.DataFrame:
             ws = get_worksheet()
             if ws is None:
                 return pd.DataFrame()
-            data = ws.get_all_records()
-            if not data:
-                return pd.DataFrame()
-            return pd.DataFrame(data)
+            # get_all_values tolerates blank/duplicate headers; we repair them.
+            return _frame_from_values(ws.get_all_values())
         except Exception as e:
             st.error(f"Error reading sheet via API: {e}")
             return pd.DataFrame()
@@ -105,13 +145,18 @@ def append_report(report: dict) -> bool:
 
             new_cols = [k for k in report.keys() if k not in headers]
             if new_cols:
+                old_width = len(headers)
                 for col in new_cols:
                     headers.append(col)
                     val = report.get(col, "")
                     if isinstance(val, list):
                         val = ", ".join(str(v) for v in val)
                     row.append(str(val) if val is not None else "")
-                ws.update("A1", [headers])
+                # Rewrite the header. Pad to at least the old width so we never
+                # leave stale/blank header cells behind (the cause of the
+                # duplicate-blank-header read error).
+                padded = headers + [""] * max(0, old_width - len(headers))
+                ws.update("A1", [padded])
 
             ws.append_row(row, value_input_option="USER_ENTERED")
             read_all_reports.clear()

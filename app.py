@@ -350,14 +350,18 @@ if st.button("Save player report ✓", type="primary", use_container_width=True)
                         continue
                     files_to_upload.append({"bytes": uf.getvalue(), "name": uf.name, "type": uf.type})
                 if files_to_upload:
-                    r2_ok = st.secrets.get("r2_endpoint", "")
-                    if not r2_ok:
-                        st.warning("⚠️ R2 storage not configured. Files not uploaded. Report will save without media.")
+                    media_urls = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
+                    if media_urls:
+                        report["mediaFileLinks"] = ", ".join(media_urls)
+                        st.info(f"📤 Uploaded {len(media_urls)} file(s)")
                     else:
-                        media_urls = upload_multiple(files_to_upload, player_name=f"{p_first} {p_last}")
-                        if media_urls:
-                            report["mediaFileLinks"] = ", ".join(media_urls)
-                            st.info(f"📤 Uploaded {len(media_urls)} file(s)")
+                        # upload_multiple returns [] if R2 not configured or upload failed
+                        try:
+                            r2_ok = st.secrets["r2_endpoint"]
+                        except Exception:
+                            r2_ok = ""
+                        if not r2_ok:
+                            st.warning("⚠️ R2 storage not configured. Files not uploaded. Report will save without media.")
                         else:
                             st.warning("⚠️ Upload failed. Report saved without media.")
 
